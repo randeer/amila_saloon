@@ -1,62 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { GalleryImage } from '../types';
 
-// Cloudinary configuration - using your credentials
+// Cloudinary configuration
 const CLOUD_NAME = 'dypqcurws';
-const FOLDER_PATH = 'web'; // Your folder in Cloudinary
+const FOLDER_PATH = 'web';
 
-// Function to fetch images from Cloudinary
-const fetchCloudinaryImages = async (): Promise<GalleryImage[]> => {
-  try {
-    // Using Cloudinary's resource list API
-    const response = await fetch(
-      `https://res.cloudinary.com/${CLOUD_NAME}/image/list/${FOLDER_PATH}.json`
-    );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch from Cloudinary');
-    }
-    
-    const data = await response.json();
-    
-    console.log('Cloudinary response:', data); // For debugging
-    
-    // If no resources found, return fallback
-    if (!data.resources || data.resources.length === 0) {
-      return getFallbackImages();
-    }
-    
-    return data.resources.map((resource: any, index: number) => ({
-      id: resource.public_id,
-      src: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_1200,h_800,c_fill/q_auto,f_auto/${resource.public_id}.${resource.format}`,
-      alt: resource.public_id.split('/').pop()?.replace(/[-_]/g, ' ') || `Salon image ${index + 1}`,
-      thumbnail: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_400,h_300,c_fill/q_auto,f_auto/${resource.public_id}.${resource.format}`,
-      original: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${resource.public_id}.${resource.format}`
-    }));
-  } catch (error) {
-    console.error('Error fetching Cloudinary images:', error);
-    return getFallbackImages();
-  }
-};
-
-// Alternative method using Cloudinary Admin API (more reliable)
-const fetchCloudinaryImagesAdmin = async (): Promise<GalleryImage[]> => {
-  try {
-    // Note: This should be done via a backend API for security
-    // For now, we'll use the client-side approach
-    const response = await fetch(`/api/cloudinary-images?folder=${FOLDER_PATH}`);
-    
-    if (response.ok) {
-      const data = await response.json();
-      return data.images;
-    }
-    
-    throw new Error('Backend API not available');
-  } catch (error) {
-    // Fall back to the public API method
-    return fetchCloudinaryImages();
-  }
-};
+// Manually define your image public_ids from Cloudinary
+// You can get these from your Cloudinary dashboard
+const cloudinaryImages: GalleryImage[] = [
+  {
+    id: 1,
+    src: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_1200,h_800,c_fill/q_auto,f_auto/${FOLDER_PATH}/image1`,
+    alt: 'Hair styling service',
+    original: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${FOLDER_PATH}/image1`
+  },
+  {
+    id: 2,
+    src: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_1200,h_800,c_fill/q_auto,f_auto/${FOLDER_PATH}/image2`,
+    alt: 'Nail art design',
+    original: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${FOLDER_PATH}/image2`
+  },
+  {
+    id: 3,
+    src: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/w_1200,h_800,c_fill/q_auto,f_auto/${FOLDER_PATH}/image3`,
+    alt: 'Facial treatment',
+    original: `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${FOLDER_PATH}/image3`
+  },
+  // Add more images as needed
+];
 
 // Fallback images
 const getFallbackImages = (): GalleryImage[] => [
@@ -75,21 +46,6 @@ const getFallbackImages = (): GalleryImage[] => [
     src: 'https://images.unsplash.com/photo-1604654894610-df644b36a5a2?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 
     alt: 'A close-up of a perfect manicure' 
   },
-  { 
-    id: 4, 
-    src: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 
-    alt: 'Client relaxing during a facial treatment' 
-  },
-  { 
-    id: 5, 
-    src: 'https://images.unsplash.com/photo-1600948838402-1d41b2dc58c3?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 
-    alt: 'The modern and stylish interior of Amila Saloon' 
-  },
-  { 
-    id: 6, 
-    src: 'https://images.unsplash.com/photo-1615562145895-0370414a5113?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 
-    alt: 'Makeup artist applying cosmetics for a special occasion' 
-  },
 ];
 
 const Gallery: React.FC = () => {
@@ -100,33 +56,29 @@ const Gallery: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Fetch images on component mount
+  // Check if Cloudinary images are available
   useEffect(() => {
-    const loadImages = async () => {
+    const checkCloudinaryImages = async () => {
       setIsLoading(true);
-      setHasError(false);
       
-      try {
-        const images = await fetchCloudinaryImages();
-        setSalonImages(images);
-        
-        // Check if we're using fallback images
-        if (images.every(img => img.src.includes('unsplash'))) {
-          setHasError(true);
-        }
-      } catch (error) {
-        console.error('Error loading gallery:', error);
+      // First, try to use Cloudinary images
+      if (cloudinaryImages.length > 0) {
+        setSalonImages(cloudinaryImages);
+        setHasError(false);
+      } else {
+        // If no Cloudinary images defined, use fallbacks
         setSalonImages(getFallbackImages());
         setHasError(true);
-      } finally {
-        setIsLoading(false);
       }
+      
+      setIsLoading(false);
     };
 
-    loadImages();
+    checkCloudinaryImages();
   }, []);
 
   const handleImageError = (imageId: string | number) => {
+    console.log('Image error for:', imageId);
     setImageErrors(prev => ({ ...prev, [imageId]: true }));
   };
 
@@ -135,7 +87,7 @@ const Gallery: React.FC = () => {
     
     const currentImage = salonImages[currentIndex];
     
-    // If image has errored, try to get original quality
+    // If image has errored, try original quality or fallback
     if (imageErrors[currentImage.id]) {
       if ('original' in currentImage) {
         return (currentImage as any).original;
@@ -166,14 +118,14 @@ const Gallery: React.FC = () => {
     setCurrentIndex(newIndex);
   }, [currentIndex, salonImages.length]);
 
-  // Auto-slide effect, paused when modal is open
+  // Auto-slide effect
   useEffect(() => {
     if (isModalOpen || salonImages.length === 0) return;
     const slideInterval = setInterval(nextSlide, 5000);
     return () => clearInterval(slideInterval);
   }, [nextSlide, isModalOpen, salonImages.length]);
 
-  // Keyboard navigation for modal
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isModalOpen) return;
@@ -191,13 +143,10 @@ const Gallery: React.FC = () => {
       <section id="gallery" className="py-20 bg-brand-accent">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-4xl font-serif font-bold text-brand-primary mb-4">Our Work</h2>
-          <p className="text-lg text-brand-dark max-w-2xl mx-auto mb-12">
-            Loading our latest transformations from Cloudinary...
-          </p>
           <div className="max-w-4xl mx-auto h-[60vh] rounded-lg bg-gray-200 animate-pulse flex items-center justify-center">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary mx-auto mb-4"></div>
-              <p className="text-brand-primary">Loading Cloudinary gallery...</p>
+              <p className="text-brand-primary">Loading gallery...</p>
             </div>
           </div>
         </div>
@@ -214,67 +163,63 @@ const Gallery: React.FC = () => {
             A glimpse into the transformations and artistry we create every day.
             {hasError && (
               <span className="text-sm text-orange-600 block mt-2">
-                Showing sample images. Upload your images to Cloudinary folder "web".
+                Using sample images. Add your Cloudinary image paths.
               </span>
             )}
-            {!hasError && salonImages.length > 0 && (
+            {!hasError && (
               <span className="text-sm text-green-600 block mt-2">
                 Loaded {salonImages.length} images from Cloudinary
               </span>
             )}
           </p>
           
-          {salonImages.length > 0 ? (
-            <>
-              <div className="max-w-4xl mx-auto relative group">
-                <div 
-                  className="w-full h-[60vh] rounded-lg bg-center bg-cover duration-500 shadow-2xl cursor-pointer"
-                  style={{ backgroundImage: `url(${getCurrentImageSrc()})` }}
-                  onClick={openModal}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && openModal()}
-                  aria-label="View larger image"
-                >
-                </div>
-                
-                {/* Left Arrow */}
-                <button 
-                  onClick={prevSlide} 
-                  className="hidden group-hover:block absolute top-[50%] -translate-y-[-50%] left-5 text-2xl rounded-full p-2 bg-black/40 text-white cursor-pointer hover:bg-black/60 transition-colors" 
-                  aria-label="Previous image"
-                >
-                  <i data-lucide="chevron-left" className="w-6 h-6"></i>
-                </button>
-                
-                {/* Right Arrow */}
-                <button 
-                  onClick={nextSlide} 
-                  className="hidden group-hover:block absolute top-[50%] -translate-y-[-50%] right-5 text-2xl rounded-full p-2 bg-black/40 text-white cursor-pointer hover:bg-black/60 transition-colors" 
-                  aria-label="Next image"
-                >
-                  <i data-lucide="chevron-right" className="w-6 h-6"></i>
-                </button>
+          <div className="max-w-4xl mx-auto relative group">
+            <div 
+              className="w-full h-[60vh] rounded-lg bg-center bg-cover duration-500 shadow-2xl cursor-pointer border-2 border-gray-300"
+              style={{ backgroundImage: `url(${getCurrentImageSrc()})` }}
+              onClick={openModal}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && openModal()}
+              aria-label="View larger image"
+            >
+              {/* Debug info */}
+              <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs p-1 rounded">
+                Image {currentIndex + 1} of {salonImages.length}
               </div>
-              
-              <div className='flex top-4 justify-center py-4'>
-                {salonImages.map((_, slideIndex) => (
-                  <button
-                    key={slideIndex}
-                    onClick={() => setCurrentIndex(slideIndex)}
-                    className={`text-2xl cursor-pointer p-1 transition-colors ${currentIndex === slideIndex ? 'text-brand-secondary' : 'text-brand-primary/50 hover:text-brand-primary'}`}
-                    aria-label={`Go to slide ${slideIndex + 1}`}
-                  >
-                    ●
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="max-w-4xl mx-auto h-[60vh] rounded-lg bg-gray-100 flex items-center justify-center">
-              <p className="text-brand-dark text-lg">No images found in Cloudinary gallery.</p>
             </div>
-          )}
+            
+            {/* Left Arrow */}
+            <button 
+              onClick={prevSlide} 
+              className="hidden group-hover:block absolute top-[50%] -translate-y-[-50%] left-5 text-2xl rounded-full p-2 bg-black/40 text-white cursor-pointer hover:bg-black/60 transition-colors" 
+              aria-label="Previous image"
+            >
+              ←
+            </button>
+            
+            {/* Right Arrow */}
+            <button 
+              onClick={nextSlide} 
+              className="hidden group-hover:block absolute top-[50%] -translate-y-[-50%] right-5 text-2xl rounded-full p-2 bg-black/40 text-white cursor-pointer hover:bg-black/60 transition-colors" 
+              aria-label="Next image"
+            >
+              →
+            </button>
+          </div>
+          
+          <div className='flex top-4 justify-center py-4'>
+            {salonImages.map((_, slideIndex) => (
+              <button
+                key={slideIndex}
+                onClick={() => setCurrentIndex(slideIndex)}
+                className={`text-2xl cursor-pointer p-1 transition-colors ${currentIndex === slideIndex ? 'text-brand-secondary' : 'text-brand-primary/50 hover:text-brand-primary'}`}
+                aria-label={`Go to slide ${slideIndex + 1}`}
+              >
+                ●
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -295,7 +240,7 @@ const Gallery: React.FC = () => {
               className="absolute top-2 right-2 text-white bg-brand-primary rounded-full p-1.5 z-10 hover:bg-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-accent transition-colors"
               aria-label="Close image viewer"
             >
-              <i data-lucide="x" className="w-6 h-6"></i>
+              ✕
             </button>
             
             <div className="relative w-full h-full flex items-center justify-center">
@@ -303,7 +248,10 @@ const Gallery: React.FC = () => {
                 src={getCurrentImageSrc()}
                 alt={salonImages[currentIndex].alt}
                 className="max-h-[calc(95vh-6rem)] w-auto object-contain rounded"
-                onError={() => handleImageError(salonImages[currentIndex].id)}
+                onError={() => {
+                  console.log('Modal image failed to load:', getCurrentImageSrc());
+                  handleImageError(salonImages[currentIndex].id);
+                }}
               />
             </div>
            
@@ -317,14 +265,14 @@ const Gallery: React.FC = () => {
               className="absolute top-1/2 -translate-y-1/2 left-2 md:-left-12 text-2xl rounded-full p-2 bg-black/40 text-white cursor-pointer hover:bg-black/60 focus:outline-none focus:ring-2 focus:ring-brand-accent transition-colors"
               aria-label="Previous image"
             >
-              <i data-lucide="chevron-left" className="w-8 h-8"></i>
+              ←
             </button>
             <button
               onClick={nextSlide}
               className="absolute top-1/2 -translate-y-1/2 right-2 md:-right-12 text-2xl rounded-full p-2 bg-black/40 text-white cursor-pointer hover:bg-black/60 focus:outline-none focus:ring-2 focus:ring-brand-accent transition-colors"
               aria-label="Next image"
             >
-              <i data-lucide="chevron-right" className="w-8 h-8"></i>
+              →
             </button>
           </div>
         </div>

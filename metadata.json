@@ -1,0 +1,7 @@
+{
+  "name": "Amila Saloon",
+  "description": "A modern and stylish website for Amila Saloon, showcasing services, a gallery, and location information powered by Google AI.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
